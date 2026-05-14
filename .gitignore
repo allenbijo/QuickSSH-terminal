@@ -1,6 +1,6 @@
-# Binaries
-qsh
-qsh.exe
+# Binaries (built artifacts at repo root only)
+/qsh
+/qsh.exe
 *.exe
 *.dll
 *.so
