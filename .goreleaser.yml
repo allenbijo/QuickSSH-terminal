@@ -1,0 +1,101 @@
+version: 2
+project_name: quickssh-tui
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: quickssh-tui
+    main: ./cmd/quickssh-tui
+    binary: quickssh-tui
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64  # drop if you want Windows ARM64 too
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+brews:
+  - name: quickssh-tui
+    repository:
+      owner: allenbijo
+      name: homebrew-tap
+      token: "{{ .Env.TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/allenbijo/QuickSSH-terminal
+    description: "Terminal UI for managing SSH port-forward tunnels (shares config with the QuickSSH Electron app)."
+    license: MIT
+    test: |
+      system "#{bin}/quickssh-tui", "--version"
+    install: |
+      bin.install "quickssh-tui"
+
+scoops:
+  - name: quickssh-tui
+    repository:
+      owner: allenbijo
+      name: scoop-bucket
+      token: "{{ .Env.TAP_TOKEN }}"
+    homepage: https://github.com/allenbijo/QuickSSH-terminal
+    description: "Terminal UI for managing SSH port-forward tunnels (shares config with the QuickSSH Electron app)."
+    license: MIT
+
+release:
+  github:
+    owner: allenbijo
+    name: QuickSSH-terminal
+  draft: false
+  prerelease: auto
+  extra_files:
+    - glob: ./scripts/install.sh
+    - glob: ./scripts/install.ps1

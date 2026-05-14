@@ -1,0 +1,37 @@
+# Binaries
+quickssh-tui
+quickssh-tui.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test + coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# GoReleaser
+dist/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency / build caches
+vendor/
+.cache/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
