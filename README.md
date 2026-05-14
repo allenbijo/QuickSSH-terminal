@@ -47,14 +47,44 @@ irm https://github.com/allenbijo/QuickSSH-terminal/releases/latest/download/inst
 
 **Homebrew (macOS / Linux)**
 ```bash
-brew install allenbijo/tap/quickssh-tui
+brew install allenbijo/tap/qsh
 ```
 
-**Scoop (Windows)**
+**winget (Windows)**
 ```powershell
-scoop bucket add allenbijo https://github.com/allenbijo/scoop-bucket
-scoop install quickssh-tui
+winget install allenbijo.qsh
 ```
+
+**Debian / Ubuntu / Mint** (download `.deb` from [latest release](https://github.com/allenbijo/QuickSSH-terminal/releases/latest))
+```bash
+curl -fsSL -o qsh.deb \
+  "$(curl -fsSL https://api.github.com/repos/allenbijo/QuickSSH-terminal/releases/latest \
+    | grep browser_download_url | grep amd64.deb | cut -d '"' -f4)"
+sudo apt install ./qsh.deb
+```
+
+**Fedora / RHEL / openSUSE**
+```bash
+curl -fsSL -o qsh.rpm \
+  "$(curl -fsSL https://api.github.com/repos/allenbijo/QuickSSH-terminal/releases/latest \
+    | grep browser_download_url | grep x86_64.rpm | cut -d '"' -f4)"
+sudo rpm -i qsh.rpm
+```
+
+**Alpine**
+```bash
+curl -fsSL -o qsh.apk \
+  "$(curl -fsSL https://api.github.com/repos/allenbijo/QuickSSH-terminal/releases/latest \
+    | grep browser_download_url | grep x86_64.apk | cut -d '"' -f4)"
+sudo apk add --allow-untrusted ./qsh.apk
+```
+
+**Arch / Manjaro / EndeavourOS** (via AUR)
+```bash
+yay -S qsh-bin       # or paru -S qsh-bin
+```
+
+> Whichever channel you use, the resulting command is **`qsh`**. Run it from any terminal.
 
 **Manual** - grab the archive for your platform from the [Releases page](https://github.com/allenbijo/QuickSSH-terminal/releases/latest), unzip, drop the binary anywhere on your `PATH`.
 
@@ -65,10 +95,10 @@ The build needs **Go 1.22 or newer**.
 **One-shot via `go install`**
 
 ```bash
-go install github.com/allenbijo/QuickSSH-terminal/cmd/quickssh-tui@latest
+go install github.com/allenbijo/QuickSSH-terminal/cmd/qsh@latest
 ```
 
-This places `quickssh-tui` in `$(go env GOBIN)` (defaults to `~/go/bin`). Make sure that directory is on your `PATH`.
+This places `qsh` in `$(go env GOBIN)` (defaults to `~/go/bin`). Make sure that directory is on your `PATH`.
 
 **Manual build**
 
@@ -76,17 +106,17 @@ This places `quickssh-tui` in `$(go env GOBIN)` (defaults to `~/go/bin`). Make s
 git clone https://github.com/allenbijo/QuickSSH-terminal
 cd QuickSSH-terminal
 go mod tidy
-go build -o quickssh-tui ./cmd/quickssh-tui
+go build -o qsh ./cmd/qsh
 ```
 
 Cross-compile examples:
 
 ```powershell
 # from Windows for Linux
-$env:GOOS="linux"; $env:GOARCH="amd64"; go build -o quickssh-tui ./cmd/quickssh-tui
+$env:GOOS="linux"; $env:GOARCH="amd64"; go build -o qsh ./cmd/qsh
 
 # from Linux/macOS for Windows
-GOOS=windows GOARCH=amd64 go build -o quickssh-tui.exe ./cmd/quickssh-tui
+GOOS=windows GOARCH=amd64 go build -o qsh.exe ./cmd/qsh
 ```
 
 ### Installing Go (if you need it)
@@ -102,12 +132,27 @@ Verify with `go version` - you should see `go1.22.x` or newer.
 
 ## Run
 
+After installing via any of the channels above, just type:
+
 ```bash
-./quickssh-tui          # Linux/macOS
-.\quickssh-tui.exe      # Windows
+qsh
 ```
 
-On first launch with no aliases yet, the empty state prompts you to press **n** to create one or **s** to point at your SSH config.
+The TUI opens fullscreen. On first launch with no aliases yet, the empty state prompts you to press **n** to create one or **s** to point at your SSH config.
+
+If you built manually (not installed), the binary lives in the build directory:
+
+```bash
+./qsh                 # Linux/macOS
+.\qsh.exe             # Windows
+```
+
+Other supported invocations:
+
+```bash
+qsh --version         # print version
+qsh --help            # show usage
+```
 
 ## Keys
 
@@ -157,7 +202,7 @@ On first launch with no aliases yet, the empty state prompts you to press **n** 
 ## Project layout
 
 ```
-cmd/quickssh-tui/main.go      program entry
+cmd/qsh/main.go              program entry
 internal/tui/                 TUI screens, theme, keys
 internal/ssh/                 tunnel + manager + config parser + session handoff
 internal/store/               JSON store, types, electron-store-compatible paths

@@ -1,14 +1,14 @@
 version: 2
-project_name: quickssh-tui
+project_name: qsh
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: quickssh-tui
-    main: ./cmd/quickssh-tui
-    binary: quickssh-tui
+  - id: qsh
+    main: ./cmd/qsh
+    binary: qsh
     env:
       - CGO_ENABLED=0
     flags:
@@ -36,6 +36,56 @@ archives:
     files:
       - README.md
       - LICENSE
+
+nfpms:
+  - id: packages
+    package_name: qsh
+    vendor: Allen Bijo
+    homepage: https://github.com/allenbijo/QuickSSH-terminal
+    maintainer: Allen Bijo <gmail@allenbijo.com>
+    description: |
+      Terminal UI for managing SSH port-forward tunnels.
+      Shares its config with the QuickSSH Electron app.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+    section: net
+    priority: optional
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/qsh/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/qsh/README.md
+    overrides:
+      deb:
+        dependencies:
+          - openssh-client
+      rpm:
+        dependencies:
+          - openssh-clients
+      apk:
+        dependencies:
+          - openssh-client
+
+aurs:
+  - name: qsh-bin
+    homepage: https://github.com/allenbijo/QuickSSH-terminal
+    description: "Terminal UI for SSH port-forward tunnels (shares config with the QuickSSH Electron app)."
+    maintainers:
+      - 'Allen Bijo <gmail@allenbijo.com>'
+    license: MIT
+    private_key: '{{ .Env.AUR_KEY }}'
+    git_url: 'ssh://aur@aur.archlinux.org/qsh-bin.git'
+    skip_upload: false
+    depends:
+      - openssh
+    package: |-
+      install -Dm755 "./qsh" "${pkgdir}/usr/bin/qsh"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/qsh-bin/LICENSE"
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/qsh-bin/README.md"
 
 checksum:
   name_template: 'checksums.txt'
@@ -66,7 +116,7 @@ changelog:
       order: 999
 
 brews:
-  - name: quickssh-tui
+  - name: qsh
     repository:
       owner: allenbijo
       name: homebrew-tap
@@ -76,19 +126,32 @@ brews:
     description: "Terminal UI for managing SSH port-forward tunnels (shares config with the QuickSSH Electron app)."
     license: MIT
     test: |
-      system "#{bin}/quickssh-tui", "--version"
+      system "#{bin}/qsh", "--version"
     install: |
-      bin.install "quickssh-tui"
+      bin.install "qsh"
 
-scoops:
-  - name: quickssh-tui
+winget:
+  - name: qsh
+    publisher: allenbijo
+    package_identifier: allenbijo.qsh
+    license: MIT
+    short_description: "Terminal UI for SSH port-forward tunnels (shares config with the QuickSSH Electron app)."
+    homepage: https://github.com/allenbijo/QuickSSH-terminal
+    publisher_url: https://github.com/allenbijo
+    publisher_support_url: https://github.com/allenbijo/QuickSSH-terminal/issues
+    release_notes_url: "https://github.com/allenbijo/QuickSSH-terminal/releases/tag/v{{ .Version }}"
     repository:
       owner: allenbijo
-      name: scoop-bucket
+      name: winget-pkgs
+      branch: "qsh-{{ .Version }}"
       token: "{{ .Env.TAP_TOKEN }}"
-    homepage: https://github.com/allenbijo/QuickSSH-terminal
-    description: "Terminal UI for managing SSH port-forward tunnels (shares config with the QuickSSH Electron app)."
-    license: MIT
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
 
 release:
   github:

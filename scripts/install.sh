@@ -4,7 +4,7 @@
 set -eu
 
 REPO="allenbijo/QuickSSH-terminal"
-BIN="quickssh-tui"
+BIN="qsh"
 
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }
 green()  { printf '\033[32m%s\033[0m\n' "$*"; }

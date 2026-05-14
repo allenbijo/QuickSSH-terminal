@@ -7,7 +7,7 @@
 $ErrorActionPreference = 'Stop'
 
 $Repo = 'allenbijo/QuickSSH-terminal'
-$Bin  = 'quickssh-tui'
+$Bin  = 'qsh'
 
 function Write-Info ($msg)  { Write-Host $msg -ForegroundColor Green }
 function Write-Warn2 ($msg) { Write-Host $msg -ForegroundColor Yellow }
@@ -22,7 +22,7 @@ $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
 
 # Latest version from GitHub.
 try {
-    $latest = Invoke-RestMethod -UseBasicParsing -Headers @{ 'User-Agent' = 'quickssh-tui-installer' } `
+    $latest = Invoke-RestMethod -UseBasicParsing -Headers @{ 'User-Agent' = 'qsh-installer' } `
         -Uri "https://api.github.com/repos/$Repo/releases/latest"
     $version = $latest.tag_name
 } catch {
@@ -35,8 +35,8 @@ $url   = "https://github.com/$Repo/releases/download/$version/$asset"
 Write-Info "Installing $Bin $version for Windows/$arch..."
 Write-Warn2 "Source: $url"
 
-$installDir = Join-Path $env:LOCALAPPDATA "Programs\quickssh-tui"
-$tmp        = Join-Path $env:TEMP "quickssh-tui-install"
+$installDir = Join-Path $env:LOCALAPPDATA "Programs\qsh"
+$tmp        = Join-Path $env:TEMP "qsh-install"
 $zipPath    = Join-Path $tmp $asset
 
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null

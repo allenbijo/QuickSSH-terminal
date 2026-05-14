@@ -1,6 +1,6 @@
 # Binaries
-quickssh-tui
-quickssh-tui.exe
+qsh
+qsh.exe
 *.exe
 *.dll
 *.so
