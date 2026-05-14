@@ -342,7 +342,7 @@ func (e editorModel) View() string {
 		)
 		focusBar := "  "
 		if e.focus > 0 && (e.focus-1)/4 == i {
-			focusBar = itemSelectedAccent.Render("�", ")
+			focusBar = itemSelectedAccent.Render("│ ")
 		}
 		b.WriteString(focusBar + row + "\n")
 	}
@@ -370,7 +370,7 @@ func (e editorModel) renderHostSelect(i int) string {
 		return errorStyle.Render("<no hosts>")
 	}
 	name := e.hosts[e.forwards[i].hostIndex].Name
-	box := "[ " + name + " �-�]"
+	box := "[ " + name + " ▾]"
 	if e.focus > 0 && (e.focus-1)/4 == i && (e.focus-1)%4 == 3 {
 		return itemSelectedAccent.Render(box)
 	}
