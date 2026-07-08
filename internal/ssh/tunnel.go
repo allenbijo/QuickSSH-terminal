@@ -78,7 +78,13 @@ func (t *Tunnel) Connect() error {
 		"-o", "ServerAliveCountMax=3",
 		"-o", "StrictHostKeyChecking=accept-new",
 		"-o", "BatchMode=no",
-		"-L", fmt.Sprintf("%d:%s:%d", t.forward.LocalPort, t.forward.RemoteHost, t.forward.RemotePort),
+	}
+	if t.forward.IsDynamic() {
+		// Dynamic SOCKS proxy: ssh -D localPort
+		args = append(args, "-D", strconv.Itoa(t.forward.LocalPort))
+	} else {
+		// Classic local forward: ssh -L localPort:remoteHost:remotePort
+		args = append(args, "-L", fmt.Sprintf("%d:%s:%d", t.forward.LocalPort, t.forward.RemoteHost, t.forward.RemotePort))
 	}
 	if t.host.Port != 0 && t.host.Port != 22 {
 		args = append(args, "-p", strconv.Itoa(t.host.Port))

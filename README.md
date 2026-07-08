@@ -170,6 +170,7 @@ qsh --help            # show usage
 | Editor   | tab / shift+tab | move between fields                 |
 | Editor   | `ctrl+a`        | add a new forward                   |
 | Editor   | `ctrl+x`        | remove the focused forward          |
+| Editor   | `ctrl+t`        | toggle forward between local & SOCKS |
 | Editor   | left / right    | cycle SSH host (when on host field) |
 | Editor   | `ctrl+s`        | save                                |
 | Editor   | `esc`           | cancel                              |
@@ -185,13 +186,21 @@ qsh --help            # show usage
 
   Writes are atomic (`tmp` + rename) and guarded by a cross-platform file lock so simultaneous Electron + TUI use is safe.
 
-* **Tunnels** - `internal/ssh/tunnel.go` spawns the system `ssh` binary with **byte-identical arguments** to the Electron app:
+* **Tunnels** - `internal/ssh/tunnel.go` spawns the system `ssh` binary. A **local** forward uses `-L`; a **SOCKS** forward (dynamic proxy) uses `-D`:
 
   ```
+  # local forward
   ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 \
          -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new \
          -o BatchMode=no -L <local>:<host>:<port> [-p P] [-l U] [-i KEY] [-J JUMP] <hostname>
+
+  # SOCKS proxy (dynamic forward)
+  ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 \
+         -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new \
+         -o BatchMode=no -D <local> [-p P] [-l U] [-i KEY] [-J JUMP] <hostname>
   ```
+
+  The local-forward arguments stay byte-identical to the Electron app. A SOCKS alias opens a local SOCKS5 proxy on `<local>` — point a browser or app at `socks5://localhost:<local>` to route its traffic through the SSH host. In the editor, press `ctrl+t` on a forward to switch it between local and SOCKS.
 
   The 2.5 s connection heuristic, 10 s health-check, and SIGTERM-then-SIGKILL teardown mirror the original. On Windows it uses `taskkill /T /F /PID` since SIGTERM isn't POSIX there.
 

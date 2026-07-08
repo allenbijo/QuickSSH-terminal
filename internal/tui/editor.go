@@ -15,6 +15,7 @@ import (
 
 type forwardForm struct {
 	id         string
+	kind       store.ForwardKind
 	localPort  textinput.Model
 	remoteHost textinput.Model
 	remotePort textinput.Model
@@ -113,12 +114,58 @@ func newForwardForm(f store.PortForward, hosts []store.SSHHost) forwardForm {
 		}
 	}
 
+	kind := f.Kind
+	if kind == "" {
+		kind = store.ForwardLocal
+	}
+
 	return forwardForm{
 		id:         f.ID,
+		kind:       kind,
 		localPort:  lp,
 		remoteHost: rh,
 		remotePort: rp,
 		hostIndex:  idx,
+	}
+}
+
+// fieldVisible reports whether the global focus index points at a field the
+// user can currently interact with. Dynamic (SOCKS) forwards hide the remote
+// host and remote port fields.
+func (e editorModel) fieldVisible(idx int) bool {
+	if idx == 0 {
+		return true
+	}
+	fIdx := (idx - 1) / 4
+	field := (idx - 1) % 4
+	if fIdx >= len(e.forwards) {
+		return false
+	}
+	if e.forwards[fIdx].kind == store.ForwardDynamic && (field == 1 || field == 2) {
+		return false
+	}
+	return true
+}
+
+// focusMove steps focus by dir (+1 / -1), skipping over any hidden fields.
+func (e *editorModel) focusMove(dir int) {
+	total := e.totalFields()
+	if total == 0 {
+		return
+	}
+	idx := e.focus
+	for i := 0; i < total; i++ {
+		idx += dir
+		if idx < 0 {
+			idx = total - 1
+		}
+		if idx >= total {
+			idx = 0
+		}
+		if e.fieldVisible(idx) {
+			e.focusField(idx)
+			return
+		}
 	}
 }
 
@@ -179,10 +226,27 @@ func (e editorModel) Update(msg tea.Msg) (editorModel, tea.Cmd) {
 	case tea.KeyMsg:
 		switch m.String() {
 		case "tab":
-			e.focusField(e.focus + 1)
+			e.focusMove(1)
 			return e, nil
 		case "shift+tab":
-			e.focusField(e.focus - 1)
+			e.focusMove(-1)
+			return e, nil
+		case "ctrl+t":
+			// Toggle the focused forward between local (-L) and SOCKS (-D).
+			if e.focus > 0 {
+				fIdx := (e.focus - 1) / 4
+				if fIdx < len(e.forwards) {
+					if e.forwards[fIdx].kind == store.ForwardDynamic {
+						e.forwards[fIdx].kind = store.ForwardLocal
+					} else {
+						e.forwards[fIdx].kind = store.ForwardDynamic
+					}
+					// If the current field just got hidden, move to local port.
+					if !e.fieldVisible(e.focus) {
+						e.focusField(1 + fIdx*4)
+					}
+				}
+			}
 			return e, nil
 		case "ctrl+a":
 			e.forwards = append(e.forwards, newForwardForm(e.blankForward(), e.hosts))
@@ -272,10 +336,6 @@ func (e editorModel) Build() (store.Alias, error) {
 		if err != nil || lp <= 0 || lp > 65535 {
 			return store.Alias{}, fmt.Errorf("forward #%d: invalid local port", i+1)
 		}
-		rp, err := strconv.Atoi(strings.TrimSpace(f.remotePort.Value()))
-		if err != nil || rp <= 0 || rp > 65535 {
-			return store.Alias{}, fmt.Errorf("forward #%d: invalid remote port", i+1)
-		}
 		host := ""
 		if len(e.hosts) > 0 && f.hostIndex < len(e.hosts) {
 			host = e.hosts[f.hostIndex].Name
@@ -283,8 +343,22 @@ func (e editorModel) Build() (store.Alias, error) {
 		if host == "" {
 			return store.Alias{}, fmt.Errorf("forward #%d: pick an ssh host", i+1)
 		}
+		if f.kind == store.ForwardDynamic {
+			out.Forwards = append(out.Forwards, store.PortForward{
+				ID:        f.id,
+				Kind:      store.ForwardDynamic,
+				LocalPort: lp,
+				SSHHost:   host,
+			})
+			continue
+		}
+		rp, err := strconv.Atoi(strings.TrimSpace(f.remotePort.Value()))
+		if err != nil || rp <= 0 || rp > 65535 {
+			return store.Alias{}, fmt.Errorf("forward #%d: invalid remote port", i+1)
+		}
 		out.Forwards = append(out.Forwards, store.PortForward{
 			ID:         f.id,
+			Kind:       store.ForwardLocal,
 			LocalPort:  lp,
 			RemoteHost: strings.TrimSpace(f.remoteHost.Value()),
 			RemotePort: rp,
@@ -311,9 +385,9 @@ func (e editorModel) View() string {
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString(labelStyle.Render("Forwards") + "  " + hintStyle.Render("(tab: next field · ctrl+a: add · ctrl+x: remove · ←/→ on host: cycle)"))
+	b.WriteString(labelStyle.Render("Forwards") + "  " + hintStyle.Render("(tab: next field · ctrl+a: add · ctrl+x: remove · ctrl+t: local/SOCKS · ←/→ on host: cycle)"))
 	b.WriteString("\n")
-	b.WriteString(hintStyle.Render("Each rule forwards a port on your local machine through the SSH host to a remote address."))
+	b.WriteString(hintStyle.Render("Local forwards map a local port to one remote address. SOCKS proxies (ctrl+t) route any traffic through the SSH host."))
 	b.WriteString("\n\n")
 
 	header := lipgloss.JoinHorizontal(
@@ -329,17 +403,29 @@ func (e editorModel) View() string {
 	b.WriteString(header + "\n")
 
 	for i, f := range e.forwards {
-		row := lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			labelStyle.Render(fmt.Sprintf("%d.  ", i+1)),
-			f.localPort.View(),
-			itemDimStyle.Render("  → "),
-			f.remoteHost.View(),
-			itemDimStyle.Render(" : "),
-			f.remotePort.View(),
-			itemDimStyle.Render("    "),
-			e.renderHostSelect(i),
-		)
+		var row string
+		if f.kind == store.ForwardDynamic {
+			row = lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				labelStyle.Render(fmt.Sprintf("%d.  ", i+1)),
+				f.localPort.View(),
+				itemDimStyle.Render("  ⇄ "),
+				valueStyle.Render(padRightLbl("SOCKS proxy", 34)),
+				e.renderHostSelect(i),
+			)
+		} else {
+			row = lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				labelStyle.Render(fmt.Sprintf("%d.  ", i+1)),
+				f.localPort.View(),
+				itemDimStyle.Render("  → "),
+				f.remoteHost.View(),
+				itemDimStyle.Render(" : "),
+				f.remotePort.View(),
+				itemDimStyle.Render("    "),
+				e.renderHostSelect(i),
+			)
+		}
 		focusBar := "  "
 		if e.focus > 0 && (e.focus-1)/4 == i {
 			focusBar = itemSelectedAccent.Render("│ ")
@@ -348,8 +434,10 @@ func (e editorModel) View() string {
 	}
 	b.WriteString("\n")
 	b.WriteString(hintStyle.Render(
-		"  Example:  local 9000 → remote 127.0.0.1 : 22  via bastion\n" +
-			"            (connect to localhost:9000 to reach port 22 on the remote network)"))
+		"  Local:  local 9000 → remote 127.0.0.1 : 22  via bastion\n" +
+			"          (connect to localhost:9000 to reach port 22 on the remote network)\n" +
+			"  SOCKS:  local 1080  ⇄  via bastion\n" +
+			"          (point your browser/app at socks5://localhost:1080 to tunnel all traffic)"))
 
 	if e.err != "" {
 		b.WriteString("\n" + errorStyle.Render(e.err))

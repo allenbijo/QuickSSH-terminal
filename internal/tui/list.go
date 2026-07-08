@@ -142,7 +142,11 @@ func (l listModel) renderRow(i int) string {
 	preview := ""
 	if len(a.Forwards) > 0 {
 		f := a.Forwards[0]
-		preview = fmt.Sprintf("%d → %s:%d", f.LocalPort, f.RemoteHost, f.RemotePort)
+		if f.IsDynamic() {
+			preview = fmt.Sprintf("%d ⇄ SOCKS", f.LocalPort)
+		} else {
+			preview = fmt.Sprintf("%d → %s:%d", f.LocalPort, f.RemoteHost, f.RemotePort)
+		}
 		if len(a.Forwards) > 1 {
 			preview += itemDimStyle.Render(fmt.Sprintf(" +%d", len(a.Forwards)-1))
 		}
